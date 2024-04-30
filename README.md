@@ -66,7 +66,7 @@ Datasets can be extended by adding the dataset in the `datasets` folder. Any lab
 - [x] **VGG** RGB datasets only. Various depts and sizes are available.
 - [x] **MobileNet** RGB datasets only.
 
-## Future models:
+### Future models:
 - [x] **Visual Transformers** (ViT , DeiT, Swin, Twin, etc.) 
 
 
