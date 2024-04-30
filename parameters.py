@@ -21,7 +21,6 @@ def args_parser():
     # Defence params
     parser.add_argument('--tau', type=float, default=1, help='Radius of the ball for CC aggregator')
     parser.add_argument('--n_iter', type=int, default=1, help='number of iteration for cc aggr')
-    parser.add_argument('--buck_rand', type=bool, default=False, help='bucket random selection for sequential cc')
     parser.add_argument('--buck_len', type=int, default=3, help='bucket length for sequential cc')
     parser.add_argument('--buck_avg', type=bool, default=True, help='average the bucket for sequential cc')
     parser.add_argument('--multi_clip', type=bool, default=False, help='average the bucket for sequential cc')
@@ -35,7 +34,6 @@ def args_parser():
     parser.add_argument('--nestrov_attack', type=bool, default=False, help='clean step first- For non-omniscient attacks')
     parser.add_argument('--epsilon', type=float, default=0.2, help='IPM attack scale')
     parser.add_argument('--pert_vec', type=str, default='std', help='[unit_vec,sign,std] for Minmax and Minsum attacks')
-    parser.add_argument('--delta_coeff', type=float, default=.99, help='Delta coefficient for optimized Sparse attacks')
     # modular design for ROP attack
     parser.add_argument('--pi', type=float, default=0, help='location of the attack,1 for full relocation to aggr reference')
     parser.add_argument('--angle', type=int, default=90, help='angle of the pert, 180,90 and none')
