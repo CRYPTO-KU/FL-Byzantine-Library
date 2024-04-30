@@ -1,6 +1,6 @@
 # Byzantine attacks and defenses in federated learning Library
 
-This library contains the implementation of the Byzantine attacks and defenses in federated learning.
+This library contains the implementation of the Byzantine attacks and defenses in federated learning (FL).
 
 ## Aggregators:
 - Aggregators can be extended by adding the aggregator in the `aggregators` folder.
