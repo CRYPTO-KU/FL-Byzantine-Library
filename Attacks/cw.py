@@ -1,7 +1,7 @@
 from client import *
 
 '''
-Customized Carlini & Wagner Approach for semi-untargted attacking.
+Customized Carlini & Wagner Approach for semi-untargeted attacking.
 
 Objective is to make the model predict the second most probable class for each input.
 
