@@ -1,5 +1,11 @@
 from client import *
 
+'''
+Customized Carlini & Wagner Approach for semi-untargted attacking.
+
+Objective is to make the model predict the second most probable class for each input.
+
+'''
 class cw_traitor(client):
     def local_step(self,batch):
         device = self.device
