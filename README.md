@@ -1,39 +1,39 @@
 # Byzantine attacks and defenses in federated learning Library
 
-This library contains the implementation of the Byzantine attacks and defenses in federated learning (FL).
+This library contains the implementation of the Byzantine attacks and defenses in federated learning.
 
 ## Aggregators:
 - Aggregators can be extended by adding the aggregator in the `aggregators` folder.
 
 
 - [x] **Bulyan** - The Hidden Vulnerability of Distributed Learning in Byzantium [[ICML 2018]](https://proceedings.mlr.press/v80/mhamdi18a.html)
-- [x] **Centered Clipping** - [[ICML 2021]](http://proceedings.mlr.press/v139/karimireddy21a.html)
-- [x] **Centered Median** - 
-- [x] **Krum** - 
-- [x] **Trimmed Mean** - 
-- [x] **SignSGD** - 
-- [x] **RFA** - 
-- [x] **Sequantial Centered Clipping** -  
-- [x] **FL-Trust** - 
-- [x] **GAS (Krum and Bulyan)** - 
-- [x] **FedAVG** -
+- [x] **Centered Clipping** - Learning from history for Byzantine robust optimization [[ICML 2021]](http://proceedings.mlr.press/v139/karimireddy21a.html)
+- [x] **Centered Median** - Byzantine-Robust Distributed Learning: Towards Optimal Statistical Rates [[ICML 2018]](http://proceedings.mlr.press/v80/yin18a/yin18a.pdf)
+- [x] **Krum**  - Machine Learning with Adversaries: Byzantine Tolerant Gradient Descent [[Neurips 2017]](https://proceedings.neurips.cc/paper_files/paper/2017/file/f4b9ec30ad9f68f89b29639786cb62ef-Paper.pdf)
+- [x] **Trimmed Mean** - Byzantine-Robust Distributed Learning: Towards Optimal Statistical Rates [[ICML 2018]](http://proceedings.mlr.press/v80/yin18a/yin18a.pdf)
+- [x] **SignSGD** - signSGD with Majority Vote is Communication Efficient and Fault Tolerant [[ICLR 2019]](https://openreview.net/pdf?id=BJxhijAcY7)
+- [x] **RFA** - Robust Aggregation for Federated Learning [[IEEE 2022 TSP]](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=9721118)
+- [x] **Sequantial Centered Clipping** -  Byzantines Can Also Learn From History: Fall of Centered Clipping in Federated Learning [[IEEE 2024 TIFS]](https://ieeexplore.ieee.org/document/9636827)
+- [x] **FL-Trust** - FLTrust: Byzantine-robust Federated Learning via Trust Bootstrapping [[NDSS 2021 TSP]](https://www.ndss-symposium.org/wp-content/uploads/ndss2021_6C-2_24434_paper.pdf)
+- [x] **GAS (Krum and Bulyan)** - Byzantine-robust learning on heterogeneous data via gradient splitting} [[ICML 2023]](https://proceedings.mlr.press/v202/liu23d/liu23d.pdf)
+- [x] **FedAVG** - [[AISTATS 2016]](http://proceedings.mlr.press/v51/mcmahan16.pdf)
 
 
 ## Byzantine Attacks:
 - Attacks can be extended by adding the attack in the `attacks` folder.
 
 
-- [x] **Label-Flip** -
+- [x] **Label-Flip** - Poisoning Attacks against Support Vector Machines [[ICML 2012]](https://icml.cc/2012/papers/880.pdf)
 - [x] **Bit-Flip** - 
 - [x] **Gaussian noise** - 
-- [x] **Untargeted C&W** - 
-- [x] **Little is enough (ALIE)** - 
-- [x] **Inner product Manipulation (IPM)** - 
-- [x] **Relocated orthogonal perturbation (ROP)** - 
-- [x] **Min-sum** - 
-- [x] **Min-max** - 
-- [x] **Sparse** - 
-- [x] **Sparse-Optimized** - 
+- [x] **Untargeted C&W ()** - Towards evaluating the robustness of neural networks  [[IEEE S&P 2017]](https://ieeexplore.ieee.org/iel7/7957740/7958557/07958570.pdf)
+- [x] **Little is enough (ALIE)** - A Little Is Enough: Circumventing Defenses For Distributed Learning [[Neurips]](https://proceedings.neurips.cc/paper_files/paper/2019/file/ec1c59141046cd1866bbbcdfb6ae31d4-Paper.pdf)
+- [x] **Inner product Manipulation (IPM)** - Fall of Empires: Breaking Byzantine-tolerant SGD by Inner Product Manipulation [[UAI 2019]](http://auai.org/uai2019/proceedings/papers/83.pdf)
+- [x] **Relocated orthogonal perturbation (ROP)** - Byzantines Can Also Learn From History: Fall of Centered Clipping in Federated Learning [[IEEE 2024 TIFS]](https://ieeexplore.ieee.org/document/9636827)
+- [x] **Min-sum** - Manipulating the byzantine: Optimizing model poisoning attacks and defenses for federated learning [[NDSS 2022]] (https://par.nsf.gov/servlets/purl/10286354)
+- [x] **Min-max** - Manipulating the byzantine: Optimizing model poisoning attacks and defenses for federated learning [[NDSS 2022]] (https://par.nsf.gov/servlets/purl/10286354)
+- [x] **Sparse** - Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning
+- [x] **Sparse-Optimized** - Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning
 
 
 ## Datasets:
@@ -66,7 +66,7 @@ Datasets can be extended by adding the dataset in the `datasets` folder. Any lab
 - [x] **VGG** RGB datasets only. Various depts and sizes are available.
 - [x] **MobileNet** RGB datasets only.
 
-### Future models:
+## Future models:
 - [x] **Visual Transformers** (ViT , DeiT, Swin, Twin, etc.) 
 
 
@@ -83,20 +83,19 @@ pip install -r requirements.txt
 If you find this repo useful, please cite our papers.
 
 ```
-@ARTICLE{10366296,
-  author={Özfatura, Kerem and Özfatura, Emre and Küpçü, Alptekin and Gunduz, Deniz},
+@ARTICLE{ROP,
+  author={Ozfatura, Kerem and Ozfatura, Emre and Kupcu, Alptekin and Gunduz, Deniz},
   journal={IEEE Transactions on Information Forensics and Security}, 
   title={Byzantines Can Also Learn From History: Fall of Centered Clipping in Federated Learning}, 
   year={2024},
   volume={19},
   number={},
   pages={2010-2022},
-  keywords={Task analysis;Robustness;Federated learning;Security;Training;Aggregates;Taxonomy;Federated learning;adversarial machine learning;deep learning},
   doi={10.1109/TIFS.2023.3345171}}
 ```
 
 ```
-@misc{ozfatura2024aggressive,
+@misc{sparseATK,
       title={Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning}, 
       author={Emre Ozfatura and Kerem Ozfatura and Alptekin Kupcu and Deniz Gunduz},
       year={2024},
