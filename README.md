@@ -14,7 +14,7 @@ This library contains the implementation of the Byzantine attacks and defenses i
 - [x] **SignSGD** - signSGD with Majority Vote is Communication Efficient and Fault Tolerant [[ICLR 2019]](https://openreview.net/pdf?id=BJxhijAcY7)
 - [x] **RFA** - Robust Aggregation for Federated Learning [[IEEE 2022 TSP]](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=9721118)
 - [x] **Sequantial Centered Clipping** -  Byzantines Can Also Learn From History: Fall of Centered Clipping in Federated Learning [[IEEE 2024 TIFS]](https://ieeexplore.ieee.org/document/9636827)
-- [x] **FL-Trust** - FLTrust: Byzantine-robust Federated Learning via Trust Bootstrapping [[NDSS 2021 TSP]](https://www.ndss-symposium.org/wp-content/uploads/ndss2021_6C-2_24434_paper.pdf)
+- [x] **FL-Trust** - FLTrust: Byzantine-robust Federated Learning via Trust Bootstrapping [[NDSS 2021]](https://www.ndss-symposium.org/wp-content/uploads/ndss2021_6C-2_24434_paper.pdf)
 - [x] **GAS (Krum and Bulyan)** - Byzantine-robust learning on heterogeneous data via gradient splitting} [[ICML 2023]](https://proceedings.mlr.press/v202/liu23d/liu23d.pdf)
 - [x] **FedAVG** - [[AISTATS 2016]](http://proceedings.mlr.press/v51/mcmahan16.pdf)
 
