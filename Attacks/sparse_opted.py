@@ -1,12 +1,11 @@
 import math
-
 from .base import _BaseByzantine
 from scipy.stats import norm
 import torch
 import numpy as np
 
 
-class sparse_opted(_BaseByzantine):
+class sparse_optimized(_BaseByzantine):
     def __init__(self, n, m, mask, *args, **kwargs):
         super().__init__(*args, **kwargs)
         s = np.floor(n / 2 + 1) - m
@@ -21,51 +20,13 @@ class sparse_opted(_BaseByzantine):
         stack2 = torch.stack(benign_gradients, 0)
         mu = torch.mean(stacked_gradients, 1).to(self.device)
         std = torch.std(stacked_gradients, 1).to(self.device)
-        if self.z_1 == 'minsum':
-            z_1 = self.z_small(stack2, mu)
-        else:
-            z_1 = self.z_1
+        per_large = self.args.sparse_scale * self.mask * std
+        z_1 = self.z_small(stack2, mu,per_large)
         pert_small = std * z_1 * (1 - self.mask)
-        per_large = self.opted(stack2, mu) * self.mask * std
         pert = pert_small + per_large
         self.adv_momentum = mu - pert
 
-    def opted(self, all_updates, model_re):
-
-        deviation = torch.std(all_updates, 0)
-
-        lamda = torch.Tensor([10]).float().to(self.device)
-        threshold_diff = 1e-5
-        lamda_fail = lamda
-        lamda_succ = 0
-
-        distances = []
-        for update in all_updates:
-            distance = torch.norm((all_updates - update), dim=1) ** 2
-            distances = distance[None, :] if not len(distances) else torch.cat((distances, distance[None, :]), 0)
-
-        max_distance = torch.max(distances)
-        del distances
-
-        while torch.abs(lamda_succ - lamda) > threshold_diff:
-            mal = lamda * deviation
-            mal_update = (model_re - mal)
-            distance = torch.norm((all_updates - mal_update), dim=1) ** 2
-            max_d = torch.max(distance)
-
-            if max_d <= max_distance:
-                lamda_succ = lamda
-                lamda = lamda + lamda_fail / 2
-            else:
-                lamda = lamda - lamda_fail / 2
-
-            lamda_fail = lamda_fail / 2
-        #print('z2',lamda_succ)
-        if lamda_succ > math.sqrt(2):
-            lamda_succ = math.sqrt(2)
-        return lamda_succ
-
-    def z_small(self, all_updates, model_re):
+    def z_small(self, all_updates, model_re,pert_large):
 
         deviation = torch.std(all_updates, 0)
 
@@ -84,7 +45,7 @@ class sparse_opted(_BaseByzantine):
         del distances
 
         while torch.abs(lamda_succ - lamda) > threshold_diff:
-            mal_update = (model_re - lamda * deviation)
+            mal_update = (model_re - (lamda * deviation * (1-self.mask)) - pert_large)
             distance = torch.norm((all_updates - mal_update), dim=1) ** 2
             score = torch.sum(distance)
 
@@ -96,7 +57,7 @@ class sparse_opted(_BaseByzantine):
                 lamda = lamda - lamda_fail / 2
 
             lamda_fail = lamda_fail / 2
-        print('z1',lamda_succ)
+        #print('z1',lamda_succ)
         return lamda_succ
 
     def local_step(self, batch):

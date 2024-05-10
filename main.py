@@ -23,9 +23,7 @@ def run(args,device):
     loyal_clients,traitor_clients = [], []
     total_sample = trainset.__len__()
     sample_inds, data_map = dl.get_indices(trainset, args)
-    net_ps = get_net(args).to(device)
-    prev_ps = get_net(args).to(device)
-    pull_model(prev_ps,net_ps)
+    net_ps = get_net(args).to(device) # global model (PS)
     print('number of parameters ', round(count_parameters(net_ps) / 1e6,3) ,'M')
     testloader = DataLoader(testset,128,shuffle=False,pin_memory=True)
     aggr = get_aggr(args,trainset,net_ps,device)
@@ -34,7 +32,6 @@ def run(args,device):
     accs = []
     ep_loss, losses = [], []
     aggregation_times = []
-    robust_update = torch.zeros(count_parameters(net_ps),device=device)
     prune_mask = None
     sparse_attack = True if args.attack.split('_')[0] == 'sparse' else False
     if sparse_attack:
@@ -53,6 +50,8 @@ def run(args,device):
     if args.traitor > 0 and not args.MITM:
         [cl.update_dataloader(dataset) for cl,dataset in zip(traitor_clients,byz_datasets) if cl.omniscient]
     traitor_ms = []
+
+    ## Start training
     while epoch < args.global_epoch:
         [cl.train_() for cl in loyal_clients]
         if num_byz >0:
@@ -100,6 +99,7 @@ def run(args,device):
                 [cl.lr_step()for cl in [*loyal_clients,*traitor_clients]]
                 lr *= .1
     return accs,losses
+
 
 if __name__ == '__main__':
     args = args_parser()

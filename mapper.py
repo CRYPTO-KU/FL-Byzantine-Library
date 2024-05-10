@@ -12,16 +12,14 @@ from Aggregators.fl_trust import FL_trust
 from Attacks.alie import alie
 from Attacks.ipm import IPMAttack
 from Attacks.rop import reloc
-from Attacks.bit_flip import pgd_traitor
+from Attacks.bit_flip import bit_flip_traitor
 from Attacks.label_flip import label_flip_traitor
+from Attacks.gaussian_noise import gaussian_noise_traitor
 from Attacks.cw import cw_traitor
 from Attacks.sparse import Sparse
 from Attacks.minmax import minmax
 from Attacks.minsum import minsum
-from Attacks.sparse_opted import sparse_opted
-from Attacks.sparse_opted2 import sparse_opted2
-from Attacks.sparse_opted3 import sparse_opted3
-from Attacks.sparse_opted4 import sparse_opted4
+from Attacks.sparse_opted import sparse_optimized
 from client import client as loyal_client
 import numpy as np
 from data_loader import DatasetSplit
@@ -30,11 +28,10 @@ from data_loader import DatasetSplit
 aggr_mapper = {'cc': Clipping, 'cm': CM, 'krum': Krum, 'rfa': RFA, 'tm': TM,'avg':fedAVG,
                'ccs':Clipping_seq,'bulyan':Bulyan,'sign':SignSGD,
                'gas':Gas,'fl_trust':FL_trust}
-attack_mapper ={'bit_flip':pgd_traitor,'label_flip':label_flip_traitor,
+attack_mapper ={'bit_flip':bit_flip_traitor,'gaussian':gaussian_noise_traitor,'label_flip':label_flip_traitor,
                 'cw':cw_traitor,'alie':alie,'reloc':reloc,'rop':reloc,
                 'ipm':IPMAttack,'sparse':Sparse,'minmax':minmax,'minsum':minsum
-                ,'sparse_opt':sparse_opted,'sparse_opt2':sparse_opted2,'sparse_opt3':sparse_opted3,
-                'sparse_opt4':sparse_opted4}
+                ,'sparse_opt':sparse_optimized}
 
 
 

@@ -1,7 +1,5 @@
 from .base import _BaseByzantine
-from scipy.stats import norm
 import torch
-import numpy as np
 
 class minmax(_BaseByzantine): ## This uses too much memory and computationally heavy.
     def __init__(self,n,m,*args,**kwargs):
@@ -14,7 +12,7 @@ class minmax(_BaseByzantine): ## This uses too much memory and computationally h
         stacked_gradients = torch.stack(benign_gradients, 1)
         mu = torch.mean(stacked_gradients, 1).to(self.device)
         stack2 =  torch.stack(benign_gradients, 0)
-        m = self.our_attack_dist(stack2, mu, self.m, dev_type=self.args.pert_vec)
+        m = self.our_attack_dist(stack2, mu, dev_type=self.args.pert_vec)
         self.adv_momentum = m
 
 
@@ -24,7 +22,7 @@ class minmax(_BaseByzantine): ## This uses too much memory and computationally h
     def train_(self, embd_momentum=None):
         return None
 
-    def our_attack_dist(self,all_updates, model_re, n_attackers, dev_type='unit_vec'):
+    def our_attack_dist(self,all_updates, model_re, dev_type='unit_vec'):
 
         if dev_type == 'unit_vec':
             deviation = model_re / torch.norm(model_re)  # unit vector, dir opp to good dir
