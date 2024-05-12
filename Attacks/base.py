@@ -64,10 +64,10 @@ class _BaseByzantine(client):
         for i in range(self.local_steps):
             batch = iterator.__next__()
             self.adv_pred(batch,self.psuedo_momentum )
-        self.psuedo_momentum .to('cpu')
+        self.psuedo_momentum.to('cpu')
 
     def get_grad(self):
-        return torch.clone(self.adv_momentum).detach()
+        return torch.clone(self.momentum).detach()
 
     def get_benign_preds(self):
         return self.psuedo_momentum.clone().detach()

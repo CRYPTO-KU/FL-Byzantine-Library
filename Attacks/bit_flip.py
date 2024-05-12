@@ -1,6 +1,6 @@
 from client import *
 
-class pgd_traitor(client):
+class bit_flip_traitor(client):
     def local_step(self,batch):
         device = self.device
         x, y = batch
