@@ -83,7 +83,6 @@ def run(args,device):
         epoch += (num_client * args.localIter * args.bs) / total_sample
         current_epoch = int(epoch)
         [cl.update_model(net_ps) for cl in [*loyal_clients, *traitor_clients]]
-        pull_model(prev_ps, net_ps)
         if num_byz > 0:
             if traitor_clients[0].relocate:
                 [cl.get_global_m(robust_update.clone()) for cl in traitor_clients]
