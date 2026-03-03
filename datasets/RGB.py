@@ -146,3 +146,53 @@ def get_imagenette_dataset(root,download,**kwargs):
                                                   download=False)
 
     return trainset, testset
+
+def get_celeba_dataset(root, download, **kwargs):
+    """
+    CelebA dataset from torchvision.
+    Returns the binary 'Smiling' attribute (index 31) as the target.
+    """
+    image_size = kwargs.get('image_size', 64)
+    target_type = 'attr'
+    
+    # CelebA statistics
+    mean = [0.5, 0.5, 0.5]
+    std = [0.5, 0.5, 0.5]
+    
+    transform_train = transforms.Compose([
+        transforms.Resize(image_size),
+        transforms.CenterCrop(image_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])
+
+    transform_test = transforms.Compose([
+        transforms.Resize(image_size),
+        transforms.CenterCrop(image_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std),
+    ])
+
+    # Smiling attribute index in CelebA is 31
+    target_transform = transforms.Lambda(lambda t: t[31])
+
+    trainset = torchvision.datasets.CelebA(
+        root=root,
+        split='train',
+        target_type=target_type,
+        transform=transform_train,
+        target_transform=target_transform,
+        download=download
+    )
+
+    testset = torchvision.datasets.CelebA(
+        root=root,
+        split='test',
+        target_type=target_type,
+        transform=transform_test,
+        target_transform=target_transform,
+        download=download
+    )
+
+    return trainset, testset

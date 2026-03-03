@@ -154,3 +154,96 @@ class MobileNet(mobilenetv2.MobileNetV2):
 if __name__ == "__main__":
     model = MNIST_NET(nn.BatchNorm2d)
     print(total_params(model))
+
+class FEMNIST_CNN(nn.Module):
+    """
+    CNN for FEMNIST (Federated EMNIST) dataset.
+    
+    Architecture:
+    - Conv2d(1, 32, 5) -> ReLU -> MaxPool2d(2)
+    - Conv2d(32, 64, 5) -> ReLU -> MaxPool2d(2)
+    - FC(7*7*64, 2048) -> ReLU
+    - FC(2048, 62)
+    """
+    def __init__(self, num_classes: int = 62):
+        super(FEMNIST_CNN, self).__init__()
+        self.num_classes = num_classes
+        
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=5, padding=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=5, padding=2)
+        self.pool = nn.MaxPool2d(2, 2)
+        
+        self.fc1 = nn.Linear(7 * 7 * 64, 2048)
+        self.fc2 = nn.Linear(2048, num_classes)
+    
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 7 * 7 * 64)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+class FEMNIST_CNN_Small(nn.Module):
+    """
+    Smaller CNN for FEMNIST.
+    """
+    def __init__(self, num_classes: int = 62):
+        super(FEMNIST_CNN_Small, self).__init__()
+        self.num_classes = num_classes
+        
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        
+        self.fc1 = nn.Linear(7 * 7 * 32, 256)
+        self.fc2 = nn.Linear(256, num_classes)
+    
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = x.view(-1, 7 * 7 * 32)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+class CelebA_CNN(nn.Module):
+    """
+    CNN for CelebA.
+    """
+    def __init__(self, num_classes: int = 2, image_size: int = 84):
+        super(CelebA_CNN, self).__init__()
+        self.num_classes = num_classes
+        self.image_size = image_size
+        
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2, 2),
+            nn.ReLU(),
+            
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2, 2),
+            nn.ReLU(),
+            
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2, 2),
+            nn.ReLU(),
+            
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2, 2),
+            nn.ReLU(),
+        )
+        
+        final_size = image_size // 16
+        self.fc = nn.Linear(32 * final_size * final_size, num_classes)
+    
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
+

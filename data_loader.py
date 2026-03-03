@@ -1,5 +1,7 @@
 from datasets.RGB import *
 from datasets.BW import *
+from datasets.HAR import get_har_dataset
+from datasets.Purchase import get_purchase_dataset
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import numpy as np
@@ -15,11 +17,17 @@ dataset_mapper = {'cifar10':get_cifar10_dataset,'cifar100':get_cifar100_dataset,
                   'emnist-d':get_EMNIST10_dataset,
                   'svhn':get_svhn_dataset,'mnist':get_MNIST_dataset,
                   'fmnist':get_FMNIST_dataset,'tiny_imagenet':get_tiny_imagenet_dataset,
-                  'imagenette': get_imagenette_dataset}
+                  'imagenette': get_imagenette_dataset,
+                  'har': get_har_dataset,
+                  'purchase': get_purchase_dataset,
+                  'celeba': get_celeba_dataset}
 
 def get_dataset(args):
     dataset_name = args.dataset_name
-    if args.kuacc and (dataset_name != 'fmnist' and dataset_name != 'mnist'):
+    tabular_datasets = {'har', 'purchase'}
+    if dataset_name.lower() in tabular_datasets:
+        arg_dic = {'root': './data', 'download': False}
+    elif args.kuacc and (dataset_name != 'fmnist' and dataset_name != 'mnist'):
         kuacc_dataset_dir = path.join(getcwd(), '..', '..', '..', '..', 'datasets')
         if dataset_name in kuac_mapper:
             loc = kuac_mapper[dataset_name]
@@ -34,16 +42,24 @@ def get_dataset(args):
 def get_indices(trainset, args,test_set=None,num_cli_force=None):
     """returns the indices of sample for each worker in either iid, or non_iid manner provided in args"""
     if args.dataset_name == 'svhn':
-        ''
         labels = trainset.labels
     elif args.dataset_name == 'imagenette':
         labels = [l[1] for l in trainset._samples]
         print('imagenette size :',len(labels))
+    elif args.dataset_name == 'celeba':
+        # CelebA from torchvision loads attributes inside `.attr`
+        # We target the 31st attribute ('Smiling')
+        labels = trainset.attr[:, 31].numpy()
     else:
         try: ## PyTorch 1.5.0+
             labels = trainset.targets
         except: ## old Torch versions
             labels = trainset.train_labels
+    
+    # Handle tensor labels (e.g., HAR, Purchase datasets)
+    import torch
+    if isinstance(labels, torch.Tensor):
+        labels = labels.numpy()
 
     labels = np.asarray(labels, dtype='int')
     nmbr_of_cls = max(labels) + 1

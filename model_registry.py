@@ -4,6 +4,8 @@ from models.VGG import VGG
 from models.MLP import *
 from models.Efficientnet import EfficientNetB0
 from models.mobilevit import MobileViT
+from models.HAR import HARLogReg, HARMLP
+from models.Purchase import PurchaseNet
 #from models.ViT import swin_tiny,swin_tiny2
 from utils import count_parameters
 
@@ -20,7 +22,11 @@ def get_net(args):
               'emnist-b': 47,
               'cifar100': 100,
               'tiny_imagenet': 200,
-              'imagenette':10}
+              'imagenette':10,
+              'har': 6,
+              'purchase': 100,
+              'femnist': 62,
+              'celeba': 2}
     norm, num_cls = norms.get(args.norm_type), labels.get(args.dataset_name)
     # First Network Architecture, then its parameters in order
     neural_networks = {'simplecifar': [SimpleCifarNet, norm, num_cls],
@@ -43,6 +49,14 @@ def get_net(args):
                        'mobilevit_xxs': [MobileViT, 224,'xx_small', num_cls],
                         'mobilevit_xs': [MobileViT, 224, 'x_small', num_cls],
                         'mobilevit_s': [MobileViT, 224, 'small', num_cls],
+                       # Tabular datasets
+                       'har_logreg': [HARLogReg],
+                       'har_mlp': [HARMLP],
+                       'purchase_net': [PurchaseNet],
+                       # FEMNIST and CelebA
+                       'femnist_cnn': [FEMNIST_CNN, num_cls],
+                       'femnist_cnn_small': [FEMNIST_CNN_Small, num_cls],
+                       'celeba_cnn': [CelebA_CNN, num_cls, getattr(args, 'image_size', 64)],
                        #'swin_t': [swin_tiny, 224, num_cls],
                        #'swin_t2': [swin_tiny2, 224, num_cls],
                        }
