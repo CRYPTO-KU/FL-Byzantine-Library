@@ -78,8 +78,9 @@ class FoundationFL(_BaseAggregator):
         Returns:
             List of synthetic update tensors
         """
+        if self.num_synthetic is None:
+            self.num_synthetic = len(client_updates) // 2
         synthetic_updates = []
-        
         if len(client_updates) == 0:
             return synthetic_updates
             

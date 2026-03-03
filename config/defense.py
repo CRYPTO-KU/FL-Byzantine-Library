@@ -72,8 +72,8 @@ class DefenseConfig:
     """Standard deviation scale for outlier detection."""
 
     # --- FoundationFL ---
-    foundation_num_synthetic: int = 2
-    """Number of synthetic updates to generate."""
+    foundation_num_synthetic: int = None
+    """Number of synthetic updates to generate. If None, it is set to n_clients / 2."""
 
     # --- LASA ---
     lalambda_n: float = 1.0

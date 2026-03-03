@@ -33,7 +33,7 @@ class AttackConfig:
     lasa_attack_k1: float = 0.01
     """LASA attack parameter k1."""
 
-    lasa_attack_k2: float = 0.7
+    lasa_attack_k2: float = 1
     """LASA attack parameter k2."""
 
     # --- Modular Attack (ROP) ---

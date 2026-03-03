@@ -23,10 +23,10 @@ class FederationConfig:
     """Fraction (or count) of Byzantine clients. Values <1 are treated as
     a ratio; values >=1 are treated as an absolute count."""
 
-    attack: str = 'lasa'
+    attack: str = 'sparse'
     """Attack strategy name. See Attacks/ for available options."""
 
-    aggregator: str = 'lasa'
+    aggregator: str = 'tm'
     """Robust aggregation rule. See Aggregators/ for available options."""
 
     hybrid_aggregator_list: str = 'cc+tm'
