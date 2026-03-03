@@ -1,6 +1,7 @@
-from Datasets.RGB import *
-from Datasets.BW import *
+from datasets.RGB import *
+from datasets.BW import *
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 import numpy as np
 import math
 import random
@@ -13,11 +14,19 @@ dataset_mapper = {'cifar10':get_cifar10_dataset,'cifar100':get_cifar100_dataset,
                   'emnist-b':get_EMNIST47_dataset,'emnist-l':get_EMNIST26_dataset,
                   'emnist-d':get_EMNIST10_dataset,
                   'svhn':get_svhn_dataset,'mnist':get_MNIST_dataset,
-                  'fmnist':get_FMNIST_dataset,'tiny_imagenet':get_tiny_imagenet_dataset}
+                  'fmnist':get_FMNIST_dataset,'tiny_imagenet':get_tiny_imagenet_dataset,
+                  'imagenette': get_imagenette_dataset}
 
 def get_dataset(args):
     dataset_name = args.dataset_name
-    arg_dic = {'root': './data', 'download': True}
+    if args.kuacc and (dataset_name != 'fmnist' and dataset_name != 'mnist'):
+        kuacc_dataset_dir = path.join(getcwd(), '..', '..', '..', '..', 'datasets')
+        if dataset_name in kuac_mapper:
+            loc = kuac_mapper[dataset_name]
+            kuacc_dataset_dir = path.join(kuacc_dataset_dir,loc)
+        arg_dic = {'root': kuacc_dataset_dir, 'download': False}
+    else:
+        arg_dic = {'root': './data', 'download': True}
     trainset, testset = dataset_mapper[dataset_name.lower()](**arg_dic)
     return trainset,testset
 
@@ -27,6 +36,9 @@ def get_indices(trainset, args,test_set=None,num_cli_force=None):
     if args.dataset_name == 'svhn':
         ''
         labels = trainset.labels
+    elif args.dataset_name == 'imagenette':
+        labels = [l[1] for l in trainset._samples]
+        print('imagenette size :',len(labels))
     else:
         try: ## PyTorch 1.5.0+
             labels = trainset.targets
@@ -166,9 +178,7 @@ def dirichlet_dist(labels, args,dirichlet_vec=None,num_cli_force=None):
         indx_sample[sample] = np.asarray(indx_sample[sample], dtype='int')
     return indx_sample, dirichlet_vec
 
-def dirichlet_new_dist(labels, args):
-    alpha = args.alpha
-    num_client = args.num_client
+def dirichlet_new_dist(labels, num_client,alpha=1.0):
 
     num_classes = max(labels) + 1
     num_class_data = np.array([np.sum(np.array(labels) == i) for i in range(num_classes)])
@@ -178,6 +188,7 @@ def dirichlet_new_dist(labels, args):
     dirichlet_vec = np.random.dirichlet(alpha_vec, num_client)
 
     proportions = dirichlet_vec / dirichlet_vec.sum(axis=0, keepdims=True)
+    print(proportions.shape)
     # print(dirichlet_vec.shape, proportions.shape, proportions.sum(axis=0))
 
     indices = (proportions.cumsum(axis=0) * num_class_data[np.newaxis, :].repeat(num_client, axis=0))
@@ -214,22 +225,46 @@ def get_iid_index(labels, args,num_cli_force=None):
 
     return indx_sample
 
-def get_fl_trust_dataset(args,dataset):
+def seperate_root_dataset(dataset, sub_sample_size):
+    rand = np.random.permutation(len(dataset))
+    root_dataset = DatasetSplit(dataset, rand[:sub_sample_size])
+    main_dataset_inds = rand[sub_sample_size:]
+    main_dataset = DatasetSplit(dataset, main_dataset_inds)
+    return main_dataset, root_dataset
+
+def get_pruning_dataset(args,dataset): ## portion of dataset
     if args.dataset_name == 'svhn':
         labels = dataset.labels
     else:
-        try:  ## PyTorch 1.5.0+
+        try: ## PyTorch 1.5.0+
             labels = dataset.targets
-        except:  ## old Torch versions
+        except: ## old Torch versions
             labels = dataset.train_labels
-    alpha = args.alpha
 
-    num_classes = max(labels) + 1
-    num_class_data = np.array([np.sum(np.array(labels) == i) for i in range(num_classes)])
-    # assert sum(num_class_data) == len(labels)
+    labels = np.asarray(labels, dtype='int')
+    num_sample = len(labels)
+    split = args.prune_dataset_split
+    prune_samples = int(num_sample * split)
+    samples = np.random.choice(labels,prune_samples,replace=False)
+    prune_dataset = DatasetSplit(dataset,samples)
+    loader = DataLoader(prune_dataset, batch_size=128, shuffle=True,
+                         num_workers=getattr(args, 'num_workers', 0))
+    return loader
 
-    alpha_vec = np.repeat(alpha, num_classes)
-    return
+def get_pruning_datasets_dist(args,dataset,sample_inds,psuedo_clients,bs): # Partition to the same distribution
+    unified_inds = []
+    [unified_inds.extend(inds) for inds in sample_inds]
+    samples = dirichlet_new_dist(unified_inds,psuedo_clients,args.alpha)
+    prune_datasets = [DatasetSplit(dataset,sample) for sample in samples]
+    nw = getattr(args, 'num_workers', 0)
+    loaders = [DataLoader(dset, batch_size=bs, shuffle=True, num_workers=nw)
+               for dset in prune_datasets]
+    return loaders
+
+def get_pruning_datasets_dist_omniscient(dataset,sample_inds,bs): # Partition to the same distribution
+    prune_datasets = [DatasetSplit(dataset,sample) for sample in sample_inds]
+    loaders = [DataLoader(dset, batch_size=bs, shuffle=True) for dset in prune_datasets]
+    return loaders
 
 
 class DatasetSplit(Dataset):
@@ -243,3 +278,22 @@ class DatasetSplit(Dataset):
     def __getitem__(self, item):
         image, label = self.dataset[self.indxs[item]]
         return image, label
+
+    @property
+    def targets(self):
+        """Expose labels for the subset so get_indices can access them."""
+        # Try to get labels from the underlying dataset
+        if hasattr(self.dataset, 'targets'):
+            all_labels = self.dataset.targets
+        elif hasattr(self.dataset, 'labels'):
+            all_labels = self.dataset.labels
+        elif hasattr(self.dataset, 'train_labels'):
+            all_labels = self.dataset.train_labels
+        else:
+            # Last resort: iterate to get labels
+            all_labels = [self.dataset[i][1] for i in range(len(self.dataset))]
+        
+        if isinstance(all_labels, np.ndarray):
+            return all_labels[self.indxs]
+        else:
+            return [all_labels[i] for i in self.indxs]

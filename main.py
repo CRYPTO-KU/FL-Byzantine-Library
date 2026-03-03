@@ -1,115 +1,177 @@
 import torch
-from parameters import args_parser
-from nn_classes import get_net
-from torch.utils.data import DataLoader
-import data_loader as dl
-from mapper import *
+from fl import FL
 from utils import *
-import time
 import numpy as np
+from logger import *
+import time
+from tqdm import tqdm
+from mapper import Mapper
+from config import args_parser
+import os
 
-def run(args,device):
-    num_client = args.num_client
-    num_byz = int(args.traitor*num_client) if args.traitor < 1 else int(args.traitor)
-    trainset, testset = dl.get_dataset(args)
-    if args.traitor > 0:
-        traitors = np.random.choice(range(num_client), num_byz, replace=False)
-        if not args.MITM:
-            sample_inds_byz, data_map_byz = dl.get_indices(trainset, args, test_set=None, num_cli_force=num_byz)
-            byz_datasets = [dl.DatasetSplit(trainset, inds) for inds in sample_inds_byz.values()]
-    else:
-        traitors = []
-    assert num_byz == len(traitors)
-    loyal_clients,traitor_clients = [], []
-    total_sample = trainset.__len__()
-    sample_inds, data_map = dl.get_indices(trainset, args)
-    net_ps = get_net(args).to(device) # global model (PS)
-    print('number of parameters ', round(count_parameters(net_ps) / 1e6,3) ,'M')
-    testloader = DataLoader(testset,128,shuffle=False,pin_memory=True)
-    aggr = get_aggr(args,trainset,net_ps,device)
-    epoch = 0
-    lr = args.lr
-    accs = []
-    ep_loss, losses = [], []
-    aggregation_times = []
-    prune_mask = None
-    sparse_attack = True if args.attack.split('_')[0] == 'sparse' else False
-    if sparse_attack:
-        prune_mask = load_sparse_mask(args,net_ps,device)
-        print('Sparse mask ratio to network:', round((prune_mask.sum() / prune_mask.numel()).item(),3))
-    for i in range(num_client):
-        worker_dataset = dl.DatasetSplit(trainset,sample_inds[i])
-        #worker_data_map = data_map[i]
-        if i in traitors:
-            traitor_clients.append(get_attacker_cl(i,worker_dataset,device,args,prune_mask))
-            if len(traitor_clients) == 1:
-                traitor_clients[0].debug_byz = True
-        else:
-            loyal_clients.append(get_benign_cl(i,worker_dataset,device,args))
-    [cl.update_model(net_ps) for cl in [*loyal_clients, *traitor_clients]]
-    if args.traitor > 0 and not args.MITM:
-        [cl.update_dataloader(dataset) for cl,dataset in zip(traitor_clients,byz_datasets) if cl.omniscient]
-    traitor_ms = []
 
-    ## Start training
-    while epoch < args.global_epoch:
-        [cl.train_() for cl in loyal_clients]
-        if num_byz >0:
-            if traitor_clients[0].omniscient:
-                if args.MITM:
-                    benign_grads = [cl.get_grad() for cl in loyal_clients]
+def train_epoch(fl: FL):
+    """Train for one epoch and collect metrics."""
+    target_epoch = int(fl.epoch) + 1  # Target the next epoch
+    metrics = {
+        'losses': [],
+        'aggr_times': [],
+        'attack_stats': {}
+    }
+    
+    while int(fl.epoch) < target_epoch:
+        # Training step
+        outputs = fl.train()
+        metrics['losses'].append(fl.avg_train_loss)
+        
+        # Aggregation step with timing
+        start_time = time.time()
+        fl.aggregate(outputs)
+        aggr_time = time.time() - start_time
+        metrics['aggr_times'].append(aggr_time)
+        
+        # Update model
+        fl.update_global_model()
+        
+        # Collect attack statistics
+        attack_info = fl.get_aggr_success_info()
+        if attack_info is not None and isinstance(attack_info, dict):
+            for key, value in attack_info.items():
+                if key in metrics['attack_stats']:
+                    metrics['attack_stats'][key].append(value)
                 else:
-                    [cl.train_psuedo_moments() for cl in traitor_clients]
-                    benign_grads = [cl.get_benign_preds() for cl in traitor_clients]
-                    #benign_grads = functools.reduce(operator.iconcat, benign_grads, [])
-                traitor_clients[0].omniscient_callback(benign_grads)
-                traitor_ms = [traitor_clients[0].adv_momentum for cl in traitor_clients] # faster to do this than to call the function again
-                #[cl.omniscient_callback(benign_grads) for cl in traitor_clients]
+                    metrics['attack_stats'][key] = [value]
+    
+    # Calculate averages and test accuracy and return as dictionary
+    test_acc = fl.evaluate_accuracy()
+
+    epoch_summary = {
+        'avg_loss': round(sum(metrics['losses']) / len(metrics['losses']), 4) if metrics['losses'] else 0.0,
+        'avg_aggr_time': round(sum(metrics['aggr_times']) / len(metrics['aggr_times']), 4) if metrics['aggr_times'] else 0.0,
+        'attack_stats': {k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in metrics['attack_stats'].items()},
+        'test_accuracy': test_acc * 100 if test_acc is not None else 0.0
+    }
+    
+    return epoch_summary
+
+
+def run(args, device):
+    """Main training run with prettier logging."""
+    if args.aggr == 'sign':
+        args.lr = 0.01
+    
+    mapper = Mapper(args, device)
+    fl = mapper.initialize_FL()
+    
+    # Initialize tracking lists
+    accs, losses, aggr_times = [], [], []
+    all_attack_stats = {}
+    
+    print(f"Starting training with {args.aggr} aggregator")
+    print(f"Training for {args.global_epoch} epochs with {len(fl.benign_clients)} benign and {len(fl.malicious_clients)} malicious clients")
+    print("-" * 60)
+    
+    for epoch in tqdm(range(args.global_epoch), desc="Training Progress"):
+        # Train one epoch
+        epoch_summary = train_epoch(fl)
+        
+        # Extract values from summary
+        train_loss = epoch_summary['avg_loss']
+        aggr_time = epoch_summary['avg_aggr_time']
+        attack_stats = epoch_summary['attack_stats']
+        test_acc = epoch_summary['test_accuracy']
+        
+        # Collect metrics
+        losses.append(train_loss)
+        aggr_times.append(aggr_time)
+        accs.append(test_acc)
+
+        
+        # Aggregate attack statistics
+        for key, value in attack_stats.items():
+            if key in all_attack_stats:
+                all_attack_stats[key].append(value)
             else:
-                [cl.train_() for cl in traitor_clients]
-                traitor_ms = [cl.get_grad() for cl in traitor_clients]
-        outputs = [cl.get_grad() for cl in loyal_clients]
-        outputs.extend(traitor_ms)
-        assert len(outputs) == num_client
-        ep_loss.append(sum([cl.mean_loss for cl in loyal_clients]) / len(loyal_clients))
-        t = time.time()
-        robust_update = aggr.__call__(outputs)
-        aggr_time = time.time() - t
-        aggregation_times.append(aggr_time)
-        ps_flat = get_model_flattened(net_ps, device)
-        ps_flat.add_(robust_update, alpha=-lr)
-        unflat_model(net_ps, ps_flat)
-        prev_epoch = int(epoch)
-        epoch += (num_client * args.localIter * args.bs) / total_sample
-        current_epoch = int(epoch)
-        [cl.update_model(net_ps) for cl in [*loyal_clients, *traitor_clients]]
-        if num_byz > 0:
-            if traitor_clients[0].relocate:
-                [cl.get_global_m(robust_update.clone()) for cl in traitor_clients]
-        if current_epoch > prev_epoch:
-            acc = evaluate_accuracy(net_ps, testloader, device)
-            mean_train_loss = round(sum(ep_loss)/len(ep_loss),4)
-            print('Epoch',current_epoch,'Accuracy',round(acc,3) * 100,'|',
-                  'Loss:',mean_train_loss,'|','Aggregation time:',round(sum(aggregation_times),3))
-            accs.append(acc*100)
-            losses.append(mean_train_loss)
-            ep_loss = []
-            if current_epoch in args.lr_decay:
-                [cl.lr_step()for cl in [*loyal_clients,*traitor_clients]]
-                lr *= .1
-    return accs,losses
+                all_attack_stats[key] = [value]
+
+        # Logging
+        attack_info = ""
+        if attack_stats:
+            attack_summary = {k: f"{v:.3f}" for k, v in attack_stats.items()}
+            attack_info = f" | Attack Stats: {attack_summary}"
+        
+        print(f"Epoch {epoch + 1:3d} | Acc: {test_acc :5.1f}% | Loss: {train_loss:.4f} | Aggr Time: {aggr_time:.4f}s{attack_info}")
+        
+        # Learning rate decay
+        if epoch + 1 in args.lr_decay:
+            fl.__update_lr__()
+
+    # Final statistics
+    print("-" * 80)
+    print(f"Final accuracy: {accs[-1]:.1f}%")
+    print(f"Average aggregation time: {np.mean(aggr_times):.4f}s")
+    
+    # Calculate average attack statistics
+    avg_attack_stats = {}
+    if all_attack_stats:
+        print("Attack Statistics Summary:")
+        for stat_name, stat_values in all_attack_stats.items():
+            avg_stat = np.mean(stat_values)
+            avg_attack_stats[stat_name] = avg_stat
+            print(f"  {stat_name}: {avg_stat:.4f} (avg over {len(stat_values)} samples)")
+    
+    args.avg_aggr_time = sum(aggr_times) / len(aggr_times)
+    final_mask = fl.final_prune_mask()
+    try:
+        print(sum(fl.malicious_clients[0].opted_z_vals) / len(fl.malicious_clients[0].opted_z_vals),'avg z val on',args.attack)
+        z_vals = [v.item() if isinstance(v, torch.Tensor) else v for v in fl.malicious_clients[0].opted_z_vals]
+        np.save(f"opted_z_vals-{args.aggr}-{args.sparse_th}.npy", z_vals)
+    except Exception as e:
+        pass
+    return accs, losses, final_mask, avg_attack_stats
 
 
 if __name__ == '__main__':
     args = args_parser()
-    device = args.gpu_id if args.gpu_id > -1 else 'cpu'
+    
+    # Set device based on availability
+    if torch.cuda.is_available():
+        device = args.gpu_id if args.gpu_id > -1 else 'cpu'
+    elif torch.backends.mps.is_available():
+        device = 'mps'
+    else:
+        device = 'cpu'
+    
     dims = (args.trials, args.global_epoch)
     accs_all, losses_all = np.empty(dims), np.empty(dims)
-    bypass_all = np.empty(dims)
-    tm_bypass_all = np.empty(dims)
     last_accs = []
     prune_masks = []
+    best_mask = None
+    all_trials_attack_stats = {}
+    
     for i in range(args.trials):
-        accs, losses = run(args, device)
+        accs, losses, prune_mask, trial_attack_stats = run(args, device)
+        accs_all[i], losses_all[i] = accs, losses
+        prune_masks.append(prune_mask)
         last_accs.append([accs[-1]])
-    save_results(args,Test_acc=accs_all, Train_losses=losses_all)
+        
+        # Aggregate attack stats across trials
+        if trial_attack_stats:
+            for stat_name, stat_value in trial_attack_stats.items():
+                if stat_name in all_trials_attack_stats:
+                    all_trials_attack_stats[stat_name].append(stat_value)
+                else:
+                    all_trials_attack_stats[stat_name] = [stat_value]
+    
+    # Calculate average attack statistics across all trials
+    avg_attack_stats = {}
+    if all_trials_attack_stats:
+        for stat_name, stat_values in all_trials_attack_stats.items():
+            avg_attack_stats[stat_name] = np.mean(stat_values)
+    
+    if prune_masks[0] is not None:
+        l = np.argmin(last_accs)
+        best_mask = prune_masks[l]
+    
+    # Save results with attack statistics
+    save_results(args, best_mask, avg_attack_stats, Test_acc=accs_all, Train_losses=losses_all)

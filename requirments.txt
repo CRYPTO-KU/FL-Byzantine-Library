@@ -1,4 +1,0 @@
-torch
-matplotlib
-numpy
-scipy

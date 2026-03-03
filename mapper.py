@@ -1,68 +1,98 @@
-from Aggregators.clipping import Clipping
-from Aggregators.cm import CM
-from Aggregators.krum import Krum
-from Aggregators.rfa import RFA
-from Aggregators.trimmed_mean import TM
-from Aggregators.fedavg import fedAVG
-from Aggregators.cc_seq import Clipping_seq
-from Aggregators.bulyan import Bulyan
-from Aggregators.sign_sgd import SignSGD
-from Aggregators.gas import Gas
-from Aggregators.fl_trust import FL_trust
-from Attacks.alie import alie
-from Attacks.ipm import IPMAttack
-from Attacks.rop import reloc
-from Attacks.bit_flip import bit_flip_traitor
-from Attacks.label_flip import label_flip_traitor
-from Attacks.gaussian_noise import gaussian_noise_traitor
-from Attacks.cw import cw_traitor
-from Attacks.sparse import Sparse
-from Attacks.minmax import minmax
-from Attacks.minsum import minsum
-from Attacks.sparse_opted import sparse_optimized
-from client import client as loyal_client
+from data_loader import DatasetSplit , get_dataset,get_indices, seperate_root_dataset
+from model_registry import get_net
+from aggregators.aggr_mapper import get_aggr, get_bucketing
+#from pruners.prune_mapper import get_attack_locations
+from pruners.prune_mapper import get_attack_locations
+from attacks.attack_mapper import get_attacker_client
+from client import client
+from fl import FL 
+from utils import count_parameters, get_layer_dims_lasa
 import numpy as np
-from data_loader import DatasetSplit
 
+class Mapper:
+    def __init__(self, args, device):
+        self.args = args
+        self.num_client = args.num_client
+        self.participation = args.cl_part
+        self.b = int(args.traitor*self.num_client) if args.traitor < 1 else int(args.traitor)
+        self.sparse_attack = True if args.attack.split('_')[0] == 'sparse' else False
+        self.train_set = None
+        self.net_ps = None
+        self.device = device
+        
+    def get_benign_cl(self,id,dataset,device,args):
+        client_params = {'id': id, 'dataset': dataset, 'device': device, 'args': args}
+        return client(**client_params)
 
-aggr_mapper = {'cc': Clipping, 'cm': CM, 'krum': Krum, 'rfa': RFA, 'tm': TM,'avg':fedAVG,
-               'ccs':Clipping_seq,'bulyan':Bulyan,'sign':SignSGD,
-               'gas':Gas,'fl_trust':FL_trust}
-attack_mapper ={'bit_flip':bit_flip_traitor,'gaussian':gaussian_noise_traitor,'label_flip':label_flip_traitor,
-                'cw':cw_traitor,'alie':alie,'reloc':reloc,'rop':reloc,
-                'ipm':IPMAttack,'sparse':Sparse,'minmax':minmax,'minsum':minsum
-                ,'sparse_opt':sparse_optimized}
+    def get_attacker_cl(self,id,dataset,device,args):
+        return get_attacker_client(id,dataset,device,args)
+        
 
+    def get_robust_aggregator(self,net_ps,device,num_client,root_dataset=None,lassa_dims=None):
+        num_traitors= int(num_client * self.args.traitor) if self.args.traitor < 1 else int(self.args.traitor)
+        if self.args.bucketing:
+            num_psuedo_clients = int(self.num_client * self.participation) // self.args.buck_len
+            if self.num_client % self.args.buck_len != 0 and self.args.bucket_op != 'concat':
+                num_psuedo_clients += 1
+            psuedo_traitors = num_traitors // self.args.buck_len        
+        else:
+            num_psuedo_clients = int(self.num_client * self.participation)
+            psuedo_traitors = int(num_traitors * self.participation)
+        aggregator = get_aggr(self.args, net_ps, device, num_psuedo_clients, psuedo_traitors,  root_dataset=root_dataset, lasa_dims=lassa_dims)
+        bucket_fn = get_bucketing(self.args)
+        return aggregator, bucket_fn
 
+    def initialize_FL(self) -> FL:
+        # get dataset and network
+        train_set, test_set = get_dataset(self.args)
+        net_ps = get_net(self.args).to(self.device)
+        print('number of parameters ', round(count_parameters(net_ps) / 1e6,3) ,'M')
+        root_dataset,lasa_layers = None, None
+        if self.args.aggr in ('fl_trust', 'skymask'):
+            train_set, root_dataset = seperate_root_dataset(train_set, 50)
+        lasa_layers = get_layer_dims_lasa(net_ps)
+        client_inds, data_map = get_indices(train_set,self.args)
+        total_samples = len(train_set)
+        benign_inds, malicious_inds = [],[]
+        # Initialize benign and malicious clients
+        benign_clients = []
+        malicious_clients = []
+        if self.b > 0:
+            traitors = np.random.choice(range(self.num_client), self.b, replace=False)
+        else:
+            traitors = []
+        for i in range(self.num_client):
+            worker_dataset = DatasetSplit(train_set, client_inds[i])
+            # worker_data_map = data_map[i]
+            if i in traitors:
+                malicious_clients.append(get_attacker_client(i, worker_dataset, self.device, self.args,layer_inds=lasa_layers))
+                malicious_inds.append(client_inds[i])
+                if len(malicious_clients) == 1:
+                    malicious_clients[0].debug_byz = True
+            else:
+                benign_clients.append(self.get_benign_cl(i, worker_dataset, self.device, self.args))
+                benign_inds.append(client_inds[i])
 
-def get_aggr(args,test_set,net_ps,device):
-    alg = args.aggr
-    secondry_alg = None
-    if '-' in alg:
-        alg,secondry_alg = alg.split('-')
-    num_client = args.num_client
-    b= int(num_client * args.traitor)
-    n= num_client-b-2
-    p = args.gas_p
-    root_dataset = None
-    if alg == 'fl_trust':
-        l = test_set.__len__()
-        root_dataset_inds = np.random.choice(range(l),100, replace=False)
-        root_dataset = DatasetSplit(test_set,root_dataset_inds)
-    aggr_params = {'cc': [args.tau], 'ccs':[args.tau,args.buck_len,args.buck_rand,args.buck_avg]
-        ,'cm': [None],'sign': [None],'krum': [num_client,b,n], 'rfa': [args.T,args.nu], 'tm': [b],'avg':[None],'bulyan':[num_client,b],
-                   'gas':[num_client,b,n,p,secondry_alg],'fl_trust':[root_dataset,net_ps,args,device]}
-    return aggr_mapper[alg](*aggr_params[alg])
+        # Initialize pruning for sparse location masks
+        if self.sparse_attack:
+            prune_mask, bn_mask = get_attack_locations(self.args, net_ps, train_set, malicious_inds, benign_inds, self.device)
+            # Benign clients can also have a mask to reduce communication, currently not used
+            for cl in malicious_clients:
+                cl.update_mask(prune_mask)
 
-
-def get_attacker_cl(id,dataset,device,args,prune_mask):
-    num_client = args.num_client
-    num_traitor = int(args.traitor*num_client) if args.traitor < 1 else int(args.traitor)
-    client_params = {'id':id,'dataset':dataset,'device':device,'args':args}
-    attacker_params = {'n':num_client,'m':num_traitor,'z':args.z_max,'eps':args.epsilon,'mask':prune_mask}
-    traitor_client = attack_mapper[args.attack](**attacker_params,**client_params)
-    return traitor_client
-
-def get_benign_cl(id,dataset,device,args):
-    client_params = {'id': id, 'dataset': dataset, 'device': device, 'args': args}
-    return loyal_client(**client_params)
+        # Initialize aggregator and bucket function
+        aggregator, bucket_fn = self.get_robust_aggregator(net_ps, self.device, self.num_client, root_dataset=root_dataset,lassa_dims=lasa_layers)
+        # Set Federated Learning parameters
+        fl_params = {
+            'args': self.args,
+            'total_samples': total_samples,
+            'net_ps': net_ps,
+            'test_set': test_set,
+            'benign_clients': benign_clients,
+            'malicious_clients': malicious_clients,
+            'aggr': aggregator,
+            'bucket': bucket_fn,
+            'device': self.device
+        }
+        fl = FL(**fl_params)
+        return fl
