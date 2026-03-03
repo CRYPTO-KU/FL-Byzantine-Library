@@ -232,7 +232,7 @@ All aggregators inherit from `aggregators.base._BaseAggregator`. Use the `--aggr
 | `skymask` | **SkyMask** | Attack-agnostic Robust Federated Learning with Fine-grained Learnable Masks | [ECCV 2024](https://github.com/KoalaYan/SkyMask) |
 | `fl_defender` | **FL-Defender** | Combating Targeted Model Poisoning Attacks in Federated Learning | [GitHub](https://github.com/najeebjebreel/FL-Defender) |
 | `fedredefense` | **FedREDefense** | Defending against Model Poisoning Attacks via Model Update Reconstruction Error | [ICML 2024](https://github.com/ShuangtongLi/FedREDefense) |
-| `foundation` | **FoundationFL** | Do We Really Need to Design New Byzantine-robust Aggregation Rules? | — |
+| `foundation` | **FoundationFL** | Do We Really Need to Design New Byzantine-robust Aggregation Rules? | [NDSS 2025](https://www.ndss-symposium.org/ndss-paper/do-we-really-need-to-design-new-byzantine-robust-aggregation-rules/) |
 | `signguard` | **SignGuard** | Byzantine-robust Aggregation using Norm Filtering and Sign Clustering | [GitHub](https://github.com/JianXu95/SignGuard) |
 | `lasa` | **LASA** | Achieving Byzantine-Resilient FL via Layer-Adaptive Sparsified Model Aggregation | [WACV 2025](https://github.com/CRYPTO-KU/LASA) |
 | `fedseca` | **FedSECA** | FedSECA: Sign Election and Coordinate-wise Aggregation for Byzantine Tolerant FL | [CVPR 2025](https://github.com/CRYPTO-KU/FedSECA) |
@@ -259,9 +259,9 @@ All attacks inherit from `attacks.base._BaseByzantine`. Use the `--attack` flag 
 | `krum_attack` | **LMP-Krum** | Local Model Poisoning Attacks to Byzantine-Robust FL | [arXiv:1911.11815](https://arxiv.org/abs/1911.11815) |
 | `trimmed_mean_attack` | **LMP-TM** | Local Model Poisoning Attacks to Byzantine-Robust FL | [arXiv:1911.11815](https://arxiv.org/abs/1911.11815) |
 | `mimic` | **Mimic** | Byzantine-Robust Learning on Heterogeneous Datasets via Bucketing | [arXiv:2006.09365](https://arxiv.org/abs/2006.09365) |
-| `sparse` | **Sparse** | Network Pruning Assisted Hybrid Byzantines in Federated Learning | [arXiv:2404.06230](https://arxiv.org/abs/2404.06230) |
-| `sparse_opt` | **Sparse-Optimized** | Network Pruning Assisted Hybrid Byzantines in Federated Learning | [arXiv:2404.06230](https://arxiv.org/abs/2404.06230) |
-| `lasa` | **LASA Attack** | Achieving Byzantine-Resilient FL via Layer-Adaptive Sparsified Model Aggregation | [WACV 2025](https://github.com/CRYPTO-KU/LASA) |
+| `sparse` | **Sparse** | Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning | [arXiv:2404.06230](https://arxiv.org/abs/2404.06230) |
+| `sparse_opt` | **Sparse-Optimized** | Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning | [arXiv:2404.06230](https://arxiv.org/abs/2404.06230) |
+| `lasa` | **LASA Attack** | Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning| [WACV 2025](https://github.com/CRYPTO-KU/LASA) |
 
 Additional variants: `edge_case`, `local_minmax`, `adaptive_krum`, `local_trimmed_mean`, `stealthy`, `mimic_variant`, `adaptive_mimic`.
 

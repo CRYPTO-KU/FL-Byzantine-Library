@@ -10,6 +10,8 @@ class FoundationFL(_BaseAggregator):
     FoundationFL: A novel defense mechanism against poisoning attacks.
     
     From "Do We Really Need to Design New Byzantine-robust Aggregation Rules?"
+    Fang et al., NDSS 2025.
+    https://www.ndss-symposium.org/ndss-paper/do-we-really-need-to-design-new-byzantine-robust-aggregation-rules/
     
     FoundationFL enhances the robustness of well-established aggregation rules by:
     1. Finding dimension-wise maximum and minimum across all client updates
