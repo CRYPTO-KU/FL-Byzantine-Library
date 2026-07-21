@@ -413,13 +413,11 @@ If you find this library useful, please cite our papers:
 ```
 
 ```bibtex
-@misc{sparseATK,
-  title={Aggressive or Imperceptible, or Both: Network Pruning Assisted Hybrid Byzantines in Federated Learning},
-  author={Emre Ozfatura and Kerem Ozfatura and Alptekin Kupcu and Deniz Gunduz},
-  year={2024},
-  eprint={2404.06230},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@article{SparseATK,
+  title={Aggressive or imperceptible, or both: Network pruning assisted hybrid byzantines in federated learning},
+  author={Ozfatura, Emre and Ozfatura, Kerem and Buyukates, Baturalp and Coskuner, Mert and Kupcu, Alptekin and Gunduz, Deniz},
+  journal={arXiv preprint arXiv:2404.06230},
+  year={2024}
 }
 ```
 
